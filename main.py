@@ -1,5 +1,6 @@
 import numpy as np
 from conjugate_gradient_method import solve
+from test_triangulation import get_square_triang
 from typing import List
 from sparse_matrix import SparseMatrix
 import matplotlib.pyplot as plt
@@ -17,7 +18,6 @@ Kxx = -0.46  # main coefficient of thermal conductivity
 Kyy = -0.46  # main coefficient of thermal conductivity
 
 
-
 class BorderType:
     HeatFlow = 'heat_flow'
     ConvectiveHeatTransfer = 'convective_heat_transfer'
@@ -25,47 +25,32 @@ class BorderType:
     HeatIsolation = 'heat_isolation'
     NoBorder = 'no_border'
 
+class ElemBorder:
 
+    type = None
+    val = None
+    length = None
+    vector = None
 
-class Detail:
-    source_points = None  # type: List[Node]
-    nodes = []
-    elements = []
+    def __init__(self, length, vector, type = BorderType.NoBorder, val = 0):
+        self.length = length
+        self.vector = vector
+        self.type = type
+        self.val = val
 
-    def __init__(self):  # customized for detail
-
-        x_left = 0
-        x_right = 100
-        y_down = 0
-        y_up = 100
-
-        nodes, cells = get_square_triang(10, 100)
-
-        # define detail border points
-        self.border_points = [Node(index=1, x=x_left, y=y_down),
-                       Node(index=2, x=x_left, y=y_up),
-                       Node(index=3, x=x_right, y=y_up),
-                       Node(index=4, x=x_right, y=y_down)]
-
-        # define point sources
-        self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_left + y_right) / 2, q=Q_POINT)]
-
-        # define detail borders
-        self.borders = [(self.border_points[0], self.border_points[1]),
-                        (self.border_points[1], self.border_points[2]),
-                        (self.border_points[2], self.border_points[3]),
-                        (self.border_points[3], self.border_points[0])]
-
-        self.nodes = [Node(i, node[0], node[1]) for i, node in enumerate(nodes)]
-
-
-
-
-
-
+class ElemBorderKey:
+    first = '12'
+    second = '23'
+    third = '31'
 
 
 class Node:
+    index = None
+    x = None
+    y = None
+    q = None
+    t = None
+
     def __init__(self, index, x, y, q=0, t=None):
         self.index = index
         self.x = x
@@ -74,27 +59,29 @@ class Node:
         self.t = t
 
     def is_in_line(self, line):
-        return sign(self, line[0], line[1]) == 0
+        return Node.sign(self, line[0], line[1]) == 0
 
     def sign(p1, p2, p3):
         return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
 
-
-
-
-
-
-
-
-
 class Element:
+
+    index = None
+    s1 = None
+    s2 = None
+    s3 = None
+    A = None
+    a = None
+    b = None
+    c = None
+    borders = None
+
     def __init__(self, index, s1, s2, s3):
         self.index = index
         # define elem nodes
         self.s1 = s1
         self.s2 = s2
         self.s3 = s3
-        self.s = [self.s1, self.s2, self.s3]
 
         # define elem area
         self.A = 0.5 * (self.s2.x * self.s3.y - self.s3.x * self.s2.y +
@@ -122,12 +109,14 @@ class Element:
         L12 = (self.c[2] ** 2 + self.b[2] ** 2) ** 0.5
         L23 = (self.c[0] ** 2 + self.b[0] ** 2) ** 0.5
         L31 = (self.c[1] ** 2 + self.b[1] ** 2) ** 0.5
-        self.borders = {'12': {'type': BorderType.NoBorder, 'val': 0, 'length': L12, 'vector': np.array([1, 1, 0])},
-                        '23': {'type': BorderType.NoBorder, 'val': 0, 'length': L23, 'vector': np.array([0, 1, 1])},
-                        '31': {'type': BorderType.NoBorder, 'val': 0, 'length': L31, 'vector': np.array([1, 0, 1])}}
 
+        self.borders = {ElemBorderKey.first : ElemBorder(L12, np.array([1, 1, 0])),
+                        ElemBorderKey.second: ElemBorder(L23, np.array([0, 1, 1])),
+                        ElemBorderKey.third : ElemBorder(L31, np.array([1, 0, 1]))}
 
-
+    @property
+    def s(self):
+        return [self.s1, self.s2, self.s3]
 
     def has_point_source(self, x0, y0):
         """
@@ -140,9 +129,9 @@ class Element:
         y0: y coord of source
         """
         source = Node(None, x0, y0)
-        d1 = sign(source, self.s1, self.s2)
-        d2 = sign(source, self.s2, self.s3)
-        d3 = sign(source, self.s3, self.s1)
+        d1 = Node.sign(source, self.s1, self.s2)
+        d2 = Node.sign(source, self.s2, self.s3)
+        d3 = Node.sign(source, self.s3, self.s1)
 
         has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
         has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
@@ -164,9 +153,6 @@ class Element:
         return (1 / (2 * self.A)) * (self.a[i] + self.b[i] * x + self.c[i] * y)
 
 
-
-
-
     def form_elem_matrix(self, Kxx, Kyy):
         """
         Description
@@ -183,15 +169,16 @@ class Element:
             (Kyy / (4 * self.A)) * np.array([[self.c[0] * self.c[0], self.c[0] * self.c[1], self.c[0] * self.c[2]],
                                              [self.c[1] * self.c[0], self.c[1] * self.c[1], self.c[1] * self.c[2]],
                                              [self.c[2] * self.c[0], self.c[2] * self.c[1], self.c[2] * self.c[2]]])
+
         # check if border has convective_heat_transfer
-        if self.borders['12']['type'] == BorderType.ConvectiveHeatTransfer:
-            k += self.borders['12']['val'] * self.borders['12']['length'] / 6 * np.array(
+        if self.borders[ElemBorderKey.first].type == BorderType.ConvectiveHeatTransfer:
+            k += self.borders[ElemBorderKey.first].val * self.borders[ElemBorderKey.first].length / 6 * np.array(
                 [[2, 1, 0], [1, 2, 0], [0, 0, 0]])
-        if self.borders['23']['type'] == BorderType.ConvectiveHeatTransfer:
-            k += self.borders['23']['val'] * self.borders['23']['length'] / 6 * np.array(
+        if self.borders[ElemBorderKey.second].type == BorderType.ConvectiveHeatTransfer:
+            k += self.borders[ElemBorderKey.second].val * self.borders[ElemBorderKey.second].length / 6 * np.array(
                 [[0, 0, 0], [0, 2, 1], [0, 1, 2]])
-        if self.borders['31']['type'] == BorderType.ConvectiveHeatTransfer:
-            k += self.borders['31']['val'] * self.borders['31']['length'] / 6 * np.array(
+        if self.borders[ElemBorderKey.third].type == BorderType.ConvectiveHeatTransfer:
+            k += self.borders[ElemBorderKey.third].val * self.borders[ElemBorderKey.third].length / 6 * np.array(
                 [[2, 0, 1], [0, 0, 0], [1, 0, 2]])
         return k
 
@@ -207,29 +194,54 @@ class Element:
         """
         f = np.zeros(3)
         for k in self.borders:
-            if self.borders[k]['val'] != 0:
-                if self.borders[k]['type'] == BorderType.HeatFlow:
-                    f += self.borders[k]['val'] / 2 * (self.borders[k]['length'] * self.borders[k]['vector'])
-                elif self.borders[k]['type'] == BorderType.ConvectiveHeatTransfer:
-                    f += self.borders[k]['val'] * T_ENV / 2 * (self.borders[k]['length'] * self.borders[k]['vector'])
+            if self.borders[k].val != 0:
+                if self.borders[k].type == BorderType.HeatFlow:
+                    f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
+                elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
+                    f += self.borders[k].val * T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
         for p in point_sources:
             if self.has_point_source(p.x, p.y):
                 f += p.q * np.array([self.N(0, p.x, p.y), self.N(1, p.x, p.y), self.N(2, p.x, p.y)])
         return f
 
+class Detail:
+    border_points = None
+    borders = None
 
+    source_points = None  # type: List[Node]
 
-class FEM:
-    def __init__(self, detail):
-        self.nodes = [ Node(int(vertex.get('index')), float(vertex.get('x')), float(vertex.get('y'))) for vertex in vertices.getchildren()  ]
-        self.elements = [ Element(int(cell.get('index')), self.nodes[int(cell.get('v0'))],
-                                         self.nodes[int(cell.get('v1'))], self.nodes[int(cell.get('v2'))]) for cell in cells.getchildren() ]
-        self.temps = []
-        self.K = SparseMatrix(None, True)
-        self.F = []
-        self.detail = detail
+    nodes = None
+    elements = None
 
+    def __init__(self):  # customized for detail
 
+        x_left = 0
+        x_right = 100
+        y_down = 0
+        y_up = 100
+
+        nodes, cells = get_square_triang(10, 100)
+
+        # define detail border points
+        self.border_points = [Node(index=1, x=x_left, y=y_down),
+                       Node(index=2, x=x_left, y=y_up),
+                       Node(index=3, x=x_right, y=y_up),
+                       Node(index=4, x=x_right, y=y_down)]
+
+        # define point sources
+        self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_down + y_up) / 2, q=Q_POINT)]
+
+        # define detail borders
+        self.borders = [(self.border_points[0], self.border_points[1]),
+                        (self.border_points[1], self.border_points[2]),
+                        (self.border_points[2], self.border_points[3]),
+                        (self.border_points[3], self.border_points[0])]
+
+        self.nodes = [Node(i, node[0], node[1]) for i, node in enumerate(nodes)]
+        self.elements = [ Element(i, self.nodes[cell[0]],
+                                         self.nodes[cell[1]], self.nodes[cell[2]]) for i, cell in enumerate(cells) ]
+
+        self.define_border_conditions()
 
     def set_type_border(self, elem):
         """
@@ -237,47 +249,62 @@ class FEM:
         -----------
         If the element is on border defines its type: convective_heat_transfer, defined_T or heat_flow
         """
-        is_border = False
-        for i in range(len(self.detail.borders)):
-            if i in [0, 1, 2, 3, 5]:
+        for i in range(len(self.borders)):
+            if i == 0:
                 type = BorderType.ConvectiveHeatTransfer
-                if i in [3, 5]:
-                    val = ALPHA1
-                else:
-                    val = ALPHA2
-            elif i == 4:
+                val = ALPHA1
+            elif i in [1, 3]:
                 type = BorderType.DefinedTemperature
-                val = T_DEF
-            else:
+                val = 0
+            elif i == 2:
                 type = BorderType.HeatFlow
                 val = Q_DEF
+            else:
+                assert(False)
 
-            if elem.s1.is_in_line(self.detail.borders[i]) and elem.s2.is_in_line(self.detail.borders[i]):
-                is_border = True
-                border = '12'
-                if type == BorderType.DefinedTemperature:
-                    self.nodes[elem.s1.index].t = val
-                    self.nodes[elem.s2.index].t = val
-            if elem.s2.is_in_line(self.detail.borders[i]) and elem.s3.is_in_line(self.detail.borders[i]):
-                is_border = True
-                border = '23'
-                if type == BorderType.DefinedTemperature:
-                    self.nodes[elem.s2.index].t = val
-                    self.nodes[elem.s3.index].t = val
-            if elem.s3.is_in_line(self.detail.borders[i]) and elem.s1.is_in_line(self.detail.borders[i]):
-                is_border = True
-                border = '31'
-                if type == BorderType.DefinedTemperature:
-                    self.nodes[elem.s3.index].t = val
-                    self.nodes[elem.s1.index].t = val
-            if is_border:
-                elem.borders[border]['type'] = type
-                elem.borders[border]['val'] = val
             is_border = False
+
+            if elem.s1.is_in_line(self.borders[i]) and elem.s2.is_in_line(self.borders[i]):
+                is_border = True
+                border = ElemBorderKey.first
+                if type == BorderType.DefinedTemperature:
+                    self.nodes[elem.s1.index].t = val
+                    self.nodes[elem.s2.index].t = val
+            elif elem.s2.is_in_line(self.borders[i]) and elem.s3.is_in_line(self.borders[i]):
+                is_border = True
+                border = ElemBorderKey.second
+                if type == BorderType.DefinedTemperature:
+                    self.nodes[elem.s2.index].t = val
+                    self.nodes[elem.s3.index].t = val
+            elif elem.s3.is_in_line(self.borders[i]) and elem.s1.is_in_line(self.borders[i]):
+                is_border = True
+                border = ElemBorderKey.third
+                if type == BorderType.DefinedTemperature:
+                    self.nodes[elem.s3.index].t = val
+                    self.nodes[elem.s1.index].t = val
+
+            if is_border:
+                elem.borders[border].type = type
+                elem.borders[border].val = val
 
     def define_border_conditions(self):
         for elem in self.elements:
             self.set_type_border(elem)
+
+
+
+class FEM:
+
+    temps = None
+    K = None
+    F = None
+    detail = None
+
+    def __init__(self, detail):
+        self.temps = []
+        self.K = SparseMatrix(None, True)
+        self.F = []
+        self.detail = detail
 
     def build_system(self):
         """
@@ -285,9 +312,9 @@ class FEM:
         -----------
         Forms system of equations to solve
         """
-        self.K.shape = (len(self.nodes), len(self.nodes))
-        self.F = np.zeros(len(self.nodes))
-        for i, elem in enumerate(self.elements):
+        self.K.shape = (len(self.detail.nodes), len(self.detail.nodes))
+        self.F = np.zeros(len(self.detail.nodes))
+        for i, elem in enumerate(self.detail.elements):
             k = elem.form_elem_matrix(Kxx, Kyy)
             for j in range(3):
                 for r in range(3):
@@ -297,7 +324,7 @@ class FEM:
             for j in range(3):
                 self.F[elem.s[j].index] += f[j]
 
-        for node in self.nodes:
+        for node in self.detail.nodes:
             if node.t is not None:
                 self.K.set(index=(node.index, node.index), val=1)
                 self.F[node.index] = node.t
@@ -311,7 +338,7 @@ class FEM:
         self.temps = solve(self.K, self.F)
 
     def get_info(self):
-        print('mesh: {} nodes, {} elements'.format(len(self.nodes), len(self.elements)))
+        print('mesh: {} nodes, {} elements'.format(len(self.detail.nodes), len(self.detail.elements)))
         print('max temperature is {}'.format(np.max(self.temps)))
         print('min temperature is {}'.format(np.min(self.temps)))
         print('mean temperature is {}'.format(np.mean(self.temps)))
@@ -322,7 +349,7 @@ class FEM:
         -----------
         Builds gradients fields and view it
         """
-        for elem in self.elements:
+        for elem in self.detail.elements:
             for p in self.detail.source_points:
                 if abs(p.x - elem.s1.x) < 0.0001 and abs(p.y - elem.s1.y) < 0.0001:
                     elem.ps = True
@@ -333,10 +360,10 @@ class FEM:
                 np.array([[elem.b[0], elem.b[1], elem.b[2]], [elem.c[0], elem.c[1], elem.c[2]]]),
                 np.array([[self.temps[elem.s1.index]], [self.temps[elem.s2.index]], [self.temps[elem.s3.index]]]))
         w = 3
-        X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 2 for elem in self.elements])
-        Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 2 for elem in self.elements])
-        U = np.array([elem.grad[0][0] for elem in self.elements])
-        V = np.array([elem.grad[1][0] for elem in self.elements])
+        X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 2 for elem in self.detail.elements])
+        Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 2 for elem in self.detail.elements])
+        U = np.array([elem.grad[0][0] for elem in self.detail.elements])
+        V = np.array([elem.grad[1][0] for elem in self.detail.elements])
 
         fig3, ax3 = plt.subplots()
         speed = np.sqrt(U ** 2 + V ** 2)
@@ -354,9 +381,9 @@ class FEM:
         Forms vtu file for paraview vizualization
         """
         output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
-        output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfCells="{}">'.format(len(self.nodes), len(self.elements))
+        output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfCells="{}">'.format(len(self.detail.nodes), len(self.detail.elements))
         components = ''
-        for node in self.nodes:
+        for node in self.detail.nodes:
             components += '{} {} 0 '.format(node.x, node.y)
         output += '\n\t\t<Points>\n\t\t\t<DataArray type="Float64" ' \
                   'NumberOfComponents="3" format="ascii">{}</DataArray>\n\t\t</Points>'.format(components)
@@ -366,9 +393,9 @@ class FEM:
         types = ''
         temps = ''
 
-        for elem in self.elements:
+        for elem in self.detail.elements:
             connectivity += '{} {} {} '.format(elem.s1.index, elem.s2.index, elem.s3.index)
-        for i in range(len(self.elements)):
+        for i in range(len(self.detail.elements)):
             offsets += '{} '.format((i + 1) * 3)
             types += '{} '.format(5)
         for t in self.temps:
@@ -390,12 +417,9 @@ class FEM:
 
 if __name__ == '__main__':
     start = time.time()
+
     fem = FEM(Detail())
-    print('reading mesh in {} seconds'.format(time.time() - start))
-    start = time.time()
-    fem.define_border_conditions()
-    print('defining border conditions in {} seconds'.format(time.time() - start))
-    start = time.time()
+
     fem.build_system()
     print('building system in {} seconds'.format(time.time() - start))
     start = time.time()
@@ -404,5 +428,5 @@ if __name__ == '__main__':
     start = time.time()
     fem.get_info()
     fem.build_gradients()
-    fem.create_vtu('mesh/data.vtu')
+    fem.create_vtu('data.vtu')
 

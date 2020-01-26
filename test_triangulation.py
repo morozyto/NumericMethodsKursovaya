@@ -18,15 +18,16 @@ def get_square_triang(num=10, radius=100, show = False):
     for s in seeds:
         dt.add(s)
 
-    fig, ax = plt.subplots()
-    ax.margins(0.1)
-    ax.set_aspect('equal')
-    plt.axis([-1, radius + 1, -1, radius + 1])
+    if show:
+        fig, ax = plt.subplots()
+        ax.margins(0.1)
+        ax.set_aspect('equal')
+        plt.axis([-1, radius + 1, -1, radius + 1])
 
-    cx, cy = zip(*seeds)
-    dt_tris = dt.get_triangilation()
-    ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), 'bo--')
-    plt.show()
+        cx, cy = zip(*seeds)
+        dt_tris = dt.get_triangilation()
+        ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), 'bo--')
+        plt.show()
 
     return seeds, dt.get_triangilation()
 
