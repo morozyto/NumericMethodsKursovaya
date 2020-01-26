@@ -1,4 +1,3 @@
-from lxml import etree, objectify
 import numpy as np
 from conjugate_gradient_method import solve
 from typing import List
@@ -28,47 +27,36 @@ class BorderType:
 
 
 
-
-
-
 class Detail:
     source_points = None  # type: List[Node]
+    nodes = []
+    elements = []
 
     def __init__(self):  # customized for detail
-        r_trumpet = 0.0315
-        h1 = 0.0058
-        r1 = r_trumpet - h1
-        l_trumpet = 0.09
-        l_spiral = 0.005
-        n = 16
-        d = 0.025 / n
-        h = 0.0082
-        rm = r_trumpet + h
-        lm = 0.047
-        h_iz = 0.01
-        r_spiral = 0.00035
-        center_spiral = r_trumpet + 0.0003 + r_spiral
 
-        # define detail points
-        self.points = [Node(index=1, x=0, y=r1),
-                       Node(index=2, x=l_trumpet, y=r1),
-                       Node(index=3, x=lm + h_iz, y=r_trumpet),
-                       Node(index=4, x=l_trumpet, y=r_trumpet),
-                       Node(index=5, x=0, y=rm),
-                       Node(index=6, x=lm, y=rm),
-                       Node(index=7, x=lm, y=r_trumpet)]
+        x_left = 0
+        x_right = 100
+        y_down = 0
+        y_up = 100
+
+        nodes, cells = get_square_triang(10, 100)
+
+        # define detail border points
+        self.border_points = [Node(index=1, x=x_left, y=y_down),
+                       Node(index=2, x=x_left, y=y_up),
+                       Node(index=3, x=x_right, y=y_up),
+                       Node(index=4, x=x_right, y=y_down)]
 
         # define point sources
-        self.source_points = []
-        for i in range(n):
-            self.source_points.append(Node(index=i, x=l_spiral + d * i, y=center_spiral, q=Q_POINT))
+        self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_left + y_right) / 2, q=Q_POINT)]
 
         # define detail borders
-        self.borders = [(self.points[4], self.points[5]), (self.points[5], self.points[6]),
-                        (self.points[6], self.points[2]),
-                        (self.points[2], self.points[3]), (self.points[3], self.points[1]),
-                        (self.points[1], self.points[0]),
-                        (self.points[0], self.points[4])]
+        self.borders = [(self.border_points[0], self.border_points[1]),
+                        (self.border_points[1], self.border_points[2]),
+                        (self.border_points[2], self.border_points[3]),
+                        (self.border_points[3], self.border_points[0])]
+
+        self.nodes = [Node(i, node[0], node[1]) for i, node in enumerate(nodes)]
 
 
 
@@ -232,28 +220,16 @@ class Element:
 
 
 class FEM:
-    def __init__(self, file, detail):
-        self.nodes = []
-        self.elements = []
+    def __init__(self, detail):
+        self.nodes = [ Node(int(vertex.get('index')), float(vertex.get('x')), float(vertex.get('y'))) for vertex in vertices.getchildren()  ]
+        self.elements = [ Element(int(cell.get('index')), self.nodes[int(cell.get('v0'))],
+                                         self.nodes[int(cell.get('v1'))], self.nodes[int(cell.get('v2'))]) for cell in cells.getchildren() ]
         self.temps = []
         self.K = SparseMatrix(None, True)
         self.F = []
         self.detail = detail
-        self.read_mesh(file)
 
-    def read_mesh(self, file):
-        with open(file) as fobj:
-            xml = fobj.read().encode()
-        objectify.fromstring(xml)
-        dolfin = etree.fromstring(xml)
-        mesh = dolfin.getchildren()[0]
-        vertices = mesh.getchildren()[0]
-        cells = mesh.getchildren()[1]
-        for vertex in vertices.getchildren():
-            self.nodes.append(Node(int(vertex.get('index')), float(vertex.get('x')), float(vertex.get('y'))))
-        for cell in cells.getchildren():
-            self.elements.append(Element(int(cell.get('index')), self.nodes[int(cell.get('v0'))],
-                                         self.nodes[int(cell.get('v1'))], self.nodes[int(cell.get('v2'))]))
+
 
     def set_type_border(self, elem):
         """
@@ -414,7 +390,7 @@ class FEM:
 
 if __name__ == '__main__':
     start = time.time()
-    fem = FEM('mesh/ris1.xml', Detail())
+    fem = FEM(Detail())
     print('reading mesh in {} seconds'.format(time.time() - start))
     start = time.time()
     fem.define_border_conditions()

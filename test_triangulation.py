@@ -4,9 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri
 import matplotlib.collections
 
-if __name__ == '__main__':
-    num = 10
-    radius = 100
+def get_square_triang(num=10, radius=100, show = False):
     x = np.linspace(1, radius - 1, num)
     y = np.linspace(1, radius - 1, num)
     xv, yx = np.meshgrid(x, y)
@@ -20,8 +18,6 @@ if __name__ == '__main__':
     for s in seeds:
         dt.add(s)
 
-    print(len(dt.get_triangilation()), "Delaunay triangles")
-
     fig, ax = plt.subplots()
     ax.margins(0.1)
     ax.set_aspect('equal')
@@ -31,3 +27,9 @@ if __name__ == '__main__':
     dt_tris = dt.get_triangilation()
     ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), 'bo--')
     plt.show()
+
+    return seeds, dt.get_triangilation()
+
+if __name__ == '__main__':
+    _, showed_value = get_square_triang(show=True)
+    print(showed_value)
