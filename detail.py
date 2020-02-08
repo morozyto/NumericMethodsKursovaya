@@ -102,6 +102,7 @@ class Detail:
                 elem.borders[border].type = type
                 elem.borders[border].val = val
 
+
     def define_border_conditions(self):
         for elem in self.elements:
             self.set_type_border(elem)

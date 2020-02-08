@@ -42,9 +42,9 @@ class Node:
         self.t = t
 
     def is_in_line(self, line):
-        return Node.sign(self, line[0], line[1]) == 0 and ((line[0].x - line[1].x != 0 and self.x > line[0].x and self.x < line[1].x)
+        return Node.sign(self, line[0], line[1]) == 0 and ((line[0].x - line[1].x != 0 and self.x >= min(line[0].x, line[1].x) and self.x <= max(line[0].x, line[1].x))
                                                            or
-                                                           (line[0].y - line[1].y != 0 and self.y > line[0].y and self.y < line[1].y))
+                                                           (line[0].y - line[1].y != 0 and self.y >= min(line[0].y, line[1].y) and self.y <= max(line[0].y, line[1].y)))
 
     def sign(p1, p2, p3):
         return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
@@ -143,13 +143,11 @@ class Element:
 
         f = np.zeros(3)
         for k in self.borders:
-            #if self.borders[k].val != 0:
-            if self.borders[k].type == BorderType.HeatFlow:
-                print('check')
-                f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
-            elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
-                print('check2')
-                f += self.borders[k].val * CONSTANTS.T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
+            if self.borders[k].val != 0:
+                if self.borders[k].type == BorderType.HeatFlow:
+                    f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
+                elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
+                    f += self.borders[k].val * CONSTANTS.T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
         for p in point_sources:
             if self.has_point_source(p.x, p.y):
                 f += p.q * np.array([self.N(0, p.x, p.y), self.N(1, p.x, p.y), self.N(2, p.x, p.y)])

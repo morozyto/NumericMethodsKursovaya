@@ -14,7 +14,7 @@ Q_POINT = 5  # voltage of source points
 Kxx = -0.46  # main coefficient of thermal conductivity
 Kyy = -0.46  # main coefficient of thermal conductivity
 
-IS_LIQUID = False
+IS_LIQUID = True
 
 if IS_LIQUID:
     ALPHA1 = None
