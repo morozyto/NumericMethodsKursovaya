@@ -25,14 +25,14 @@ class BorderType:
     HeatIsolation = 'heat_isolation'
     NoBorder = 'no_border'
 
-class ElemBorder:
 
+class ElemBorder:
     type = None
     val = None
     length = None
     vector = None
 
-    def __init__(self, length, vector, type = BorderType.NoBorder, val = 0):
+    def __init__(self, length, vector, type = BorderType.NoBorder, val=0):
         self.length = length
         self.vector = vector
         self.type = type
@@ -135,9 +135,9 @@ class Element:
 
         has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
         has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
-        is_in = d1 == 0 or d2 == 0 or d3 == 0
+        #is_in = d1 == 0 or d2 == 0 or d3 == 0
 
-        return not (has_neg and has_pos) or is_in
+        return not (has_neg and has_pos)
 
     def N(self, i, x, y):
         """
@@ -182,7 +182,6 @@ class Element:
                 [[2, 0, 1], [0, 0, 0], [1, 0, 2]])
         return k
 
-
     def form_vector_of_external_influences(self, point_sources):
         """
         Description
@@ -203,6 +202,7 @@ class Element:
             if self.has_point_source(p.x, p.y):
                 f += p.q * np.array([self.N(0, p.x, p.y), self.N(1, p.x, p.y), self.N(2, p.x, p.y)])
         return f
+
 
 class Detail:
     border_points = None
@@ -238,8 +238,8 @@ class Detail:
                         (self.border_points[3], self.border_points[0])]
 
         self.nodes = [Node(i, node[0], node[1]) for i, node in enumerate(nodes)]
-        self.elements = [ Element(i, self.nodes[cell[0]],
-                                         self.nodes[cell[1]], self.nodes[cell[2]]) for i, cell in enumerate(cells) ]
+        self.elements = [Element(i, self.nodes[cell[0]],
+                                         self.nodes[cell[1]], self.nodes[cell[2]]) for i, cell in enumerate(cells)]
 
         self.define_border_conditions()
 
@@ -255,7 +255,7 @@ class Detail:
                 val = ALPHA1
             elif i in [1, 3]:
                 type = BorderType.DefinedTemperature
-                val = 0
+                val = T_DEF
             elif i == 2:
                 type = BorderType.HeatFlow
                 val = Q_DEF
@@ -328,7 +328,7 @@ class FEM:
             if node.t is not None:
                 self.K.set(index=(node.index, node.index), val=1)
                 self.F[node.index] = node.t
-                for node_k in self.nodes:
+                for node_k in self.detail.nodes:
                     if node_k.index != node.index:
                         self.K.set(index=(node.index, node_k.index), val=0)
                         self.F[node_k.index] -= self.K.get(index=(node_k.index, node.index)) * node.t
@@ -350,18 +350,11 @@ class FEM:
         Builds gradients fields and view it
         """
         for elem in self.detail.elements:
-            for p in self.detail.source_points:
-                if abs(p.x - elem.s1.x) < 0.0001 and abs(p.y - elem.s1.y) < 0.0001:
-                    elem.ps = True
-                    break
-                else:
-                    elem.ps = False
             elem.grad = 1 / (2 * elem.A) * np.dot(
                 np.array([[elem.b[0], elem.b[1], elem.b[2]], [elem.c[0], elem.c[1], elem.c[2]]]),
                 np.array([[self.temps[elem.s1.index]], [self.temps[elem.s2.index]], [self.temps[elem.s3.index]]]))
-        w = 3
-        X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 2 for elem in self.detail.elements])
-        Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 2 for elem in self.detail.elements])
+        X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 3 for elem in self.detail.elements])
+        Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 3 for elem in self.detail.elements])
         U = np.array([elem.grad[0][0] for elem in self.detail.elements])
         V = np.array([elem.grad[1][0] for elem in self.detail.elements])
 
@@ -429,4 +422,5 @@ if __name__ == '__main__':
     fem.get_info()
     fem.build_gradients()
     fem.create_vtu('data.vtu')
+
 

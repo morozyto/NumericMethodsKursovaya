@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import matplotlib.tri
 import matplotlib.collections
 
-def get_square_triang(num=10, radius=100, show = False):
-    x = np.linspace(1, radius - 1, num)
-    y = np.linspace(1, radius - 1, num)
+def get_square_triang(num=10, radius=100, show=False):
+    x = np.linspace(0, radius, num)
+    y = np.linspace(0, radius, num)
     xv, yx = np.meshgrid(x, y)
     seeds = []
     for i in x:
@@ -34,3 +34,4 @@ def get_square_triang(num=10, radius=100, show = False):
 if __name__ == '__main__':
     _, showed_value = get_square_triang(show=True)
     print(showed_value)
+
