@@ -1,27 +1,45 @@
 import numpy as np
 from conjugate_gradient_method import solve
-from test_triangulation import get_square_triang
+from test_triangulation import get_square_triang, get_square_circled_triang
 from typing import List
 from sparse_matrix import SparseMatrix
 import matplotlib.pyplot as plt
 import time
 
-ALPHA1 = 10  # air heat transfer coefficient
-h_iz = 0.01  # height of isolation material
-K_iz = 0.0883  # isolation material coefficient of thermal conductivity
-ALPHA2 = ALPHA1 * K_iz / (K_iz + ALPHA1 * h_iz)  # isolation heat transfer coefficient
-T_ENV = 20  # environment temperature
+IS_LIQUID = True
+
+ALPHA1 = 10  # air heat transfer coefficient     @unused
+h_iz = 0.01  # height of isolation material    @unused
+K_iz = 0.0883  # isolation material coefficient of thermal conductivity  @unused
+ALPHA2 = ALPHA1 * K_iz / (K_iz + ALPHA1 * h_iz)  # isolation heat transfer coefficient   @unues
+T_ENV = 20  # environment temperature           @ unused
 T_DEF = 20  # defined border temperature
-Q_DEF = 0  # heat flow
-Q_POINT = 5  # voltage of source points
-Kxx = -0.46  # main coefficient of thermal conductivity
-Kyy = -0.46  # main coefficient of thermal conductivity
+Q_DEF = 0  # heat flow                          @unused
+Q_POINT = 5  # voltage of source points                      # 0
+Kxx = -0.46  # main coefficient of thermal conductivity      $ 1
+Kyy = -0.46  # main coefficient of thermal conductivity      $ 1
+
+min_val = 0
+max_val = 20
+
+if IS_LIQUID:
+    ALPHA1 = None
+    h_iz = None
+    K_iz = None
+    ALPHA2 = None
+    T_ENV = None
+    T_DEF = None
+    Q_DEF = None
+    Q_POINT = 0
+    Kxx = 1
+    Kyy = 1
 
 
 class BorderType:
     HeatFlow = 'heat_flow'
     ConvectiveHeatTransfer = 'convective_heat_transfer'
     DefinedTemperature = 'defined_temperature'
+    LinearDefinedTemperature = 'linear_defined_temperature'
     HeatIsolation = 'heat_isolation'
     NoBorder = 'no_border'
 
@@ -59,10 +77,13 @@ class Node:
         self.t = t
 
     def is_in_line(self, line):
-        return Node.sign(self, line[0], line[1]) == 0
+        return Node.sign(self, line[0], line[1]) == 0 and ((line[0].x - line[1].x != 0 and self.x > line[0].x and self.x < line[1].x)
+                                                           or
+                                                           (line[0].y - line[1].y != 0 and self.y > line[0].y and self.y < line[1].y))
 
     def sign(p1, p2, p3):
         return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
+
 
 class Element:
 
@@ -135,7 +156,6 @@ class Element:
 
         has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
         has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
-        #is_in = d1 == 0 or d2 == 0 or d3 == 0
 
         return not (has_neg and has_pos)
 
@@ -208,19 +228,25 @@ class Detail:
     border_points = None
     borders = None
 
-    source_points = None  # type: List[Node]
+    source_points = []  # type: List[Node]
 
     nodes = None
     elements = None
 
-    def __init__(self):  # customized for detail
+    isLiquid = False
+
+    def __init__(self, isLiquid = False):  # customized for detail
+        self.isLiquid = isLiquid
+        quad_size = 100
 
         x_left = 0
-        x_right = 100
+        x_right = quad_size
         y_down = 0
-        y_up = 100
+        y_up = quad_size
 
-        nodes, cells = get_square_triang(10, 100)
+        N = 15
+
+        nodes, cells, border_nodes_indexes = get_square_circled_triang(N, quad_size) if isLiquid else get_square_triang(N, quad_size)
 
         # define detail border points
         self.border_points = [Node(index=1, x=x_left, y=y_down),
@@ -228,8 +254,9 @@ class Detail:
                        Node(index=3, x=x_right, y=y_up),
                        Node(index=4, x=x_right, y=y_down)]
 
-        # define point sources
-        self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_down + y_up) / 2, q=Q_POINT)]
+        if not isLiquid:
+            # define point sources
+            self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_down + y_up) / 2, q=Q_POINT)]
 
         # define detail borders
         self.borders = [(self.border_points[0], self.border_points[1]),
@@ -241,6 +268,10 @@ class Detail:
         self.elements = [Element(i, self.nodes[cell[0]],
                                          self.nodes[cell[1]], self.nodes[cell[2]]) for i, cell in enumerate(cells)]
 
+        if isLiquid:
+            for i in border_nodes_indexes:
+                self.nodes[i].t = 0
+
         self.define_border_conditions()
 
     def set_type_border(self, elem):
@@ -250,17 +281,30 @@ class Detail:
         If the element is on border defines its type: convective_heat_transfer, defined_T or heat_flow
         """
         for i in range(len(self.borders)):
-            if i == 0:
-                type = BorderType.ConvectiveHeatTransfer
-                val = ALPHA1
-            elif i in [1, 3]:
-                type = BorderType.DefinedTemperature
-                val = T_DEF
-            elif i == 2:
-                type = BorderType.HeatFlow
-                val = Q_DEF
+            if self.isLiquid:
+                if i in [0, 2]:
+                    type = BorderType.LinearDefinedTemperature
+                    val = None
+                elif i in [1, 3]:
+                    type = BorderType.DefinedTemperature
+                    if i == 1:
+                        val = max_val
+                    else:
+                        val = min_val
+                else:
+                    assert(False)
             else:
-                assert(False)
+                if i == 0:
+                    type = BorderType.ConvectiveHeatTransfer
+                    val = ALPHA1
+                elif i in [1, 3]:
+                    type = BorderType.DefinedTemperature
+                    val = T_DEF
+                elif i == 2:
+                    type = BorderType.HeatFlow
+                    val = Q_DEF
+                else:
+                    assert(False)
 
             is_border = False
 
@@ -270,18 +314,44 @@ class Detail:
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s1.index].t = val
                     self.nodes[elem.s2.index].t = val
+                elif type == BorderType.LinearDefinedTemperature:
+
+                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
+                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
+
+                    koef = (max_val - min_val) / (up_border - bottom_border)
+                    self.nodes[elem.s1.index].t = min_val + koef*(self.nodes[elem.s1.index].y - bottom_border)
+                    self.nodes[elem.s2.index].t = min_val + koef*(self.nodes[elem.s2.index].y - bottom_border)
+
             elif elem.s2.is_in_line(self.borders[i]) and elem.s3.is_in_line(self.borders[i]):
                 is_border = True
                 border = ElemBorderKey.second
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s2.index].t = val
                     self.nodes[elem.s3.index].t = val
+                elif type == BorderType.LinearDefinedTemperature:
+
+                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
+                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
+
+                    koef = (max_val - min_val) / (up_border - bottom_border)
+                    self.nodes[elem.s3.index].t = min_val + koef * (self.nodes[elem.s3.index].y - bottom_border)
+                    self.nodes[elem.s2.index].t = min_val + koef * (self.nodes[elem.s2.index].y - bottom_border)
+
             elif elem.s3.is_in_line(self.borders[i]) and elem.s1.is_in_line(self.borders[i]):
                 is_border = True
                 border = ElemBorderKey.third
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s3.index].t = val
                     self.nodes[elem.s1.index].t = val
+                elif type == BorderType.LinearDefinedTemperature:
+
+                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
+                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
+
+                    koef = (max_val - min_val) / (up_border - bottom_border)
+                    self.nodes[elem.s1.index].t = min_val + koef * (self.nodes[elem.s1.index].y - bottom_border)
+                    self.nodes[elem.s3.index].t = min_val + koef * (self.nodes[elem.s3.index].y - bottom_border)
 
             if is_border:
                 elem.borders[border].type = type
@@ -411,7 +481,7 @@ class FEM:
 if __name__ == '__main__':
     start = time.time()
 
-    fem = FEM(Detail())
+    fem = FEM(Detail(isLiquid=IS_LIQUID))
 
     fem.build_system()
     print('building system in {} seconds'.format(time.time() - start))
