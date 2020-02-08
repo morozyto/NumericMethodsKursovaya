@@ -9,7 +9,7 @@ ALPHA2 = ALPHA1 * K_iz / (K_iz + ALPHA1 * h_iz)  # isolation heat transfer coeff
 T_ENV = 20  # environment temperature or flow value
 T_DEF = 20  # defined border temperature
 Q_DEF = 0  # heat flow
-Q_POINT = 5  # voltage of source points
+Q_POINT = -100  # voltage of source points
 
 Kxx = -0.46  # main coefficient of thermal conductivity
 Kyy = -0.46  # main coefficient of thermal conductivity

@@ -2,7 +2,7 @@ from conjugate_gradient_method import solve
 from sparse_matrix import SparseMatrix
 import matplotlib.pyplot as plt
 import time
-
+import math
 from detail import *
 
 class FEM:
@@ -55,19 +55,42 @@ class FEM:
             elem.grad = 1 / (2 * elem.A) * np.dot(
                 np.array([[elem.b[0], elem.b[1], elem.b[2]], [elem.c[0], elem.c[1], elem.c[2]]]),
                 np.array([[self.temps[elem.s1.index]], [self.temps[elem.s2.index]], [self.temps[elem.s3.index]]]))
-        X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 3 for elem in self.detail.elements])
-        Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 3 for elem in self.detail.elements])
-        U = np.array([elem.grad[0][0] for elem in self.detail.elements])
-        V = np.array([elem.grad[1][0] for elem in self.detail.elements])
+        self.grad_X = np.array([(elem.s1.x + elem.s2.x + elem.s3.x) / 3 for elem in self.detail.elements])
+        self.grad_Y = np.array([(elem.s1.y + elem.s2.y + elem.s3.y) / 3 for elem in self.detail.elements])
+        self.grad_U = np.array([elem.grad[0][0] for elem in self.detail.elements])
+        self.grad_V = np.array([elem.grad[1][0] for elem in self.detail.elements])
 
         fig3, ax3 = plt.subplots()
-        speed = np.sqrt(U ** 2 + V ** 2)
-        Q = ax3.quiver(X, Y, U, V, speed, width=0.0008)
+        speed = np.sqrt(self.grad_U ** 2 + self.grad_V ** 2)
+        Q = ax3.quiver(self.grad_X, self.grad_Y, self.grad_U, self.grad_V, speed, width=0.0008)
         ax3.quiverkey(Q, 0.9, 0.9, 2, r'$2 \frac{m}{s}$', labelpos='E',
                       coordinates='figure')
-        ax3.scatter(X, Y, color='0.5', s=1.1)
+        ax3.scatter(self.grad_X, self.grad_Y, color='0.5', s=1.1)
         plt.gca().set_aspect('equal', adjustable='box')
         plt.show()
+
+    def create_vtu_vector(self, file):
+        output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
+        output += '\n\t\t<Piece NumberOfPoints="{}">'.format(len(self.detail.elements))
+        components = ''
+        for x, y in zip(self.grad_X, self.grad_Y):
+            components += '{} {} 0 '.format(x, y)
+        output += '\n\t\t<Points>\n\t\t\t<DataArray type="Float64" ' \
+                  'NumberOfComponents="3" format="ascii">{}</DataArray>\n\t\t</Points>'.format(components)
+
+        values = ''
+
+        for u, v in zip(self.grad_U, self.grad_V):
+            values += '{} '.format(math.sqrt(u*u + v*v))
+
+
+        output += '\n\t\t<PointData Scalars="T">\n\t\t\t<DataArray type="Float64" Name="T"' \
+                  ' format="ascii">{}</DataArray>\n\t\t</PointData>'.format(values)
+        output += '\n\t\t</Piece>\n\t</UnstructuredGrid>\n</VTKFile>'
+
+        f = open(file, "w+")
+        f.write(output)
+        f.close()
 
     def create_vtu(self, file):
         output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
@@ -118,3 +141,5 @@ if __name__ == '__main__':
     fem.get_info()
     fem.build_gradients()
     fem.create_vtu('data.vtu')
+    fem.create_vtu_vector('gradient_data.vtu')
+
