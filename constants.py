@@ -1,4 +1,4 @@
-SIDE_ELEMENTS_COUNT = 100
+SIDE_ELEMENTS_COUNT = 30
 
 ALPHA1 = 10  # air heat transfer coefficient
 

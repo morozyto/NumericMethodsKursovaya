@@ -2,11 +2,7 @@ import numpy as np
 
 
 class SparseMatrix:
-    """
-    Description
-    -----------
-    Class for sparse matrix
-    """
+
     def __init__(self, shape=None, zeros=True):
         self.A = {}
         if shape is not None:
@@ -35,15 +31,6 @@ class SparseMatrix:
             self.A[index] = -val
 
     def dot(self, b):
-        """
-        Dot product of n*n symmetric sparse matrix and n-vector
-        Parameters
-        ----------
-        b: 1d numpy.array
-        Returns
-        -------
-        1d numpy.array x such that Ab = x
-        """
         result = np.zeros(len(b))
         for row, col in self.A:
             if row > col:

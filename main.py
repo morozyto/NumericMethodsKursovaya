@@ -19,11 +19,6 @@ class FEM:
         self.detail = detail
 
     def build_system(self):
-        """
-        Description
-        -----------
-        Forms system of equations to solve
-        """
         self.K.shape = (len(self.detail.nodes), len(self.detail.nodes))
         self.F = np.zeros(len(self.detail.nodes))
         for i, elem in enumerate(self.detail.elements):
@@ -56,11 +51,6 @@ class FEM:
         print('mean temperature is {}'.format(np.mean(self.temps)))
 
     def build_gradients(self):
-        """
-        Description
-        -----------
-        Builds gradients fields and view it
-        """
         for elem in self.detail.elements:
             elem.grad = 1 / (2 * elem.A) * np.dot(
                 np.array([[elem.b[0], elem.b[1], elem.b[2]], [elem.c[0], elem.c[1], elem.c[2]]]),
@@ -80,11 +70,6 @@ class FEM:
         plt.show()
 
     def create_vtu(self, file):
-        """
-        Description
-        -----------
-        Forms vtu file for paraview vizualization
-        """
         output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
         output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfCells="{}">'.format(len(self.detail.nodes), len(self.detail.elements))
         components = ''

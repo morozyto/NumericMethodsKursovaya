@@ -105,15 +105,6 @@ class Element:
         return [self.s1, self.s2, self.s3]
 
     def has_point_source(self, x0, y0):
-        """
-        Description
-        -----------
-        Check if element has heat point source or crosses it
-        Parameters
-        ----------
-        x0: x coord of source
-        y0: y coord of source
-        """
         source = Node(None, x0, y0)
         d1 = Node.sign(source, self.s1, self.s2)
         d2 = Node.sign(source, self.s2, self.s3)
@@ -125,29 +116,10 @@ class Element:
         return not (has_neg and has_pos)
 
     def N(self, i, x, y):
-        """
-        Description
-        -----------
-        Returns value of basis function in point
-        Parameters
-        ----------
-        i: index of basis function
-        x: x coord of node
-        y: y coord of node
-        """
         return (1 / (2 * self.A)) * (self.a[i] + self.b[i] * x + self.c[i] * y)
 
-
     def form_elem_matrix(self, Kxx, Kyy):
-        """
-        Description
-        -----------
-        Forms left part of system
-        Parameters
-        ----------
-        Kxx: thermal conductivity by x
-        Kyy: thermal conductivity by y
-        """
+
         k = (Kxx / (4 * self.A)) * np.array([[self.b[0] * self.b[0], self.b[0] * self.b[1], self.b[0] * self.b[2]],
                                              [self.b[1] * self.b[0], self.b[1] * self.b[1], self.b[1] * self.b[2]],
                                              [self.b[2] * self.b[0], self.b[2] * self.b[1], self.b[2] * self.b[2]]]) + \
@@ -168,21 +140,16 @@ class Element:
         return k
 
     def form_vector_of_external_influences(self, point_sources):
-        """
-        Description
-        -----------
-        Forms right part of system - vector of external influences
-        Parameters
-        ----------
-        point_sources: array of point sources to check
-        """
+
         f = np.zeros(3)
         for k in self.borders:
-            if self.borders[k].val != 0:
-                if self.borders[k].type == BorderType.HeatFlow:
-                    f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
-                elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
-                    f += self.borders[k].val * CONSTANTS.T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
+            #if self.borders[k].val != 0:
+            if self.borders[k].type == BorderType.HeatFlow:
+                print('check')
+                f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
+            elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
+                print('check2')
+                f += self.borders[k].val * CONSTANTS.T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
         for p in point_sources:
             if self.has_point_source(p.x, p.y):
                 f += p.q * np.array([self.N(0, p.x, p.y), self.N(1, p.x, p.y), self.N(2, p.x, p.y)])

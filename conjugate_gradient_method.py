@@ -3,19 +3,6 @@ from scipy.sparse import csr_matrix
 
 
 def solve(A, b, x=None, eps=1e-3):
-    """
-    Description
-    -----------
-    Solve a linear equation Ax = b with conjugate gradient method.
-    Parameters
-    ----------
-    A: SparseMatrix of positive semi-definite (symmetric) matrix
-    b: 1d numpy.array
-    x: 1d numpy.array of initial point
-    Returns
-    -------
-    1d numpy.array x such that Ax = b
-    """
     n = len(b)
     if not x:
         x = np.ones(n)

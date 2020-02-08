@@ -5,16 +5,16 @@ class Detail:
     border_points = None
     borders = None
 
-    source_points = []  # type: List[Node]
+    source_points = []
 
     nodes = None
     elements = None
 
     isLiquid = False
 
-    def __init__(self, isLiquid = False):  # customized for detail
+    def __init__(self, isLiquid = False):
         self.isLiquid = isLiquid
-        quad_size = 100
+        quad_size = 1000
 
         x_left = 0
         x_right = quad_size
@@ -52,11 +52,6 @@ class Detail:
         self.define_border_conditions()
 
     def set_type_border(self, elem):
-        """
-        Description
-        -----------
-        If the element is on border defines its type: convective_heat_transfer, defined_T or heat_flow
-        """
         for i in range(len(self.borders)):
             if self.isLiquid:
                 if i in [0, 2]:
