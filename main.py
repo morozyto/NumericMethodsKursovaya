@@ -71,7 +71,7 @@ class FEM:
 
     def create_vtu_vector(self, file):
         output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
-        output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfPoints="0">'.format(len(self.detail.elements))
+        output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfCells="0">'.format(len(self.detail.elements))
         components = ''
         for x, y in zip(self.grad_X, self.grad_Y):
             components += '{} {} 0 '.format(x, y)
