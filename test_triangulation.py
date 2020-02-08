@@ -73,7 +73,12 @@ def get_square_circled_triang(num=10, radius=100, show=False):
     def check_triangle(obj):
         return (obj[0] in bad_triangle_points) + (obj[1] in bad_triangle_points) + (obj[2] in bad_triangle_points)
 
-    res = [item for item in res if check_triangle(item) < 2]
+    def check_triangle2(obj):
+        return (not is_in_circle(circle_x, circle_y, circle_radius, seeds[obj[0]][0], seeds[obj[0]][1]) or
+                     not is_in_circle(circle_x, circle_y, circle_radius, seeds[obj[1]][0], seeds[obj[1]][1]) or
+                     not is_in_circle(circle_x, circle_y, circle_radius, seeds[obj[2]][0], seeds[obj[2]][1]))
+
+    res = [item for item in res if (check_triangle(item) == 2 and check_triangle2(item)) or check_triangle(item) < 2]
 
     if show:
         fig, ax = plt.subplots()
@@ -90,7 +95,8 @@ def get_square_circled_triang(num=10, radius=100, show=False):
 
 if __name__ == '__main__':
     # _, showed_value, _ = get_square_triang(show=True)
-    seeds, showed_value, _ = get_square_circled_triang(num=40, show=True)
+    seeds, showed_value, t = get_square_circled_triang(num=10, show=True)
     print(seeds)
     print(showed_value)
+    print(t)
 
