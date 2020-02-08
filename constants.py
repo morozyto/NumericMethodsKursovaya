@@ -1,3 +1,5 @@
+SIDE_ELEMENTS_COUNT = 100
+
 ALPHA1 = 10  # air heat transfer coefficient
 
 h_iz = 0.01  # height of isolation material

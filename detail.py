@@ -21,7 +21,7 @@ class Detail:
         y_down = 0
         y_up = quad_size
 
-        N = 10
+        N = CONSTANTS.SIDE_ELEMENTS_COUNT
 
         nodes, cells, border_nodes_indexes = get_square_circled_triang(N, quad_size) if isLiquid else get_square_triang(N, quad_size)
 
