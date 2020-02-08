@@ -26,11 +26,11 @@ def get_square_triang(num=10, radius=100, show=False):
         plt.axis([-1, radius + 1, -1, radius + 1])
 
         cx, cy = zip(*seeds)
-        dt_tris = dt.get_triangilation()
+        dt_tris = dt.get_triangulation()
         ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), 'bo--')
         plt.show()
 
-    return seeds, dt.get_triangilation(), []
+    return seeds, dt.get_triangulation(), []
 
 def is_in_circle(center_x, center_y, r, x, y):
     return (x - center_x) ** 2 + (y - center_y) ** 2 < r ** 2
@@ -68,7 +68,7 @@ def get_square_circled_triang(num=10, radius=100, show=False):
     for s in seeds:
         dt.add(s)
 
-    res = dt.get_triangilation()
+    res = dt.get_triangulation()
 
     def check_triangle(obj):
         return (obj[0] in bad_triangle_points) + (obj[1] in bad_triangle_points) + (obj[2] in bad_triangle_points)

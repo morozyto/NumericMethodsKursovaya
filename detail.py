@@ -1,6 +1,5 @@
 from details_triangulations import get_square_triang, get_square_circled_triang
 from element import *
-from constants import *
 
 class Detail:
     border_points = None
@@ -34,7 +33,7 @@ class Detail:
 
         if not isLiquid:
             # define point sources
-            self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_down + y_up) / 2, q=Q_POINT)]
+            self.source_points = [Node(index=0, x=(x_left + x_right) / 2, y=(y_down + y_up) / 2, q=CONSTANTS.Q_POINT)]
 
         # define detail borders
         self.borders = [(self.border_points[0], self.border_points[1]),
@@ -66,21 +65,21 @@ class Detail:
                 elif i in [1, 3]:
                     type = BorderType.DefinedTemperature
                     if i == 1:
-                        val = max_val
+                        val = CONSTANTS.MAX_VAL
                     else:
-                        val = min_val
+                        val = CONSTANTS.MIN_VAL
                 else:
                     assert(False)
             else:
                 if i == 0:
                     type = BorderType.ConvectiveHeatTransfer
-                    val = ALPHA1
+                    val = CONSTANTS.ALPHA1
                 elif i in [1, 3]:
                     type = BorderType.DefinedTemperature
-                    val = T_DEF
+                    val = CONSTANTS.T_DEF
                 elif i == 2:
                     type = BorderType.HeatFlow
-                    val = Q_DEF
+                    val = CONSTANTS.Q_DEF
                 else:
                     assert(False)
 

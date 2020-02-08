@@ -1,5 +1,4 @@
 from conjugate_gradient_method import solve
-from typing import List
 from sparse_matrix import SparseMatrix
 import matplotlib.pyplot as plt
 import time
@@ -28,7 +27,7 @@ class FEM:
         self.K.shape = (len(self.detail.nodes), len(self.detail.nodes))
         self.F = np.zeros(len(self.detail.nodes))
         for i, elem in enumerate(self.detail.elements):
-            k = elem.form_elem_matrix(Kxx, Kyy)
+            k = elem.form_elem_matrix(CONSTANTS.Kxx, CONSTANTS.Kyy)
             for j in range(3):
                 for r in range(3):
                     self.K.add(index=(elem.s[j].index, elem.s[r].index), val=k[j][r])
@@ -123,7 +122,7 @@ class FEM:
 if __name__ == '__main__':
     start = time.time()
 
-    fem = FEM(Detail(isLiquid=IS_LIQUID))
+    fem = FEM(Detail(isLiquid=CONSTANTS.IS_LIQUID))
 
     fem.build_system()
     print('building system in {} seconds'.format(time.time() - start))
@@ -134,5 +133,3 @@ if __name__ == '__main__':
     fem.get_info()
     fem.build_gradients()
     fem.create_vtu('data.vtu')
-
-

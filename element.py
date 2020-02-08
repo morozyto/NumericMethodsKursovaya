@@ -1,4 +1,5 @@
 import numpy as np
+import constants as CONSTANTS
 
 
 class BorderType:
@@ -181,7 +182,7 @@ class Element:
                 if self.borders[k].type == BorderType.HeatFlow:
                     f += self.borders[k].val / 2 * (self.borders[k].length * self.borders[k].vector)
                 elif self.borders[k].type == BorderType.ConvectiveHeatTransfer:
-                    f += self.borders[k].val * T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
+                    f += self.borders[k].val * CONSTANTS.T_ENV / 2 * (self.borders[k].length * self.borders[k].vector)
         for p in point_sources:
             if self.has_point_source(p.x, p.y):
                 f += p.q * np.array([self.N(0, p.x, p.y), self.N(1, p.x, p.y), self.N(2, p.x, p.y)])

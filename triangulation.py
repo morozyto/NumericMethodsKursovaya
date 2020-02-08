@@ -1,6 +1,4 @@
 import numpy as np
-from math import sqrt
-
 
 class Delaunay:
     def __init__(self, center=(0, 0), radius=np.inf):
@@ -91,6 +89,6 @@ class Delaunay:
             self.triangles[T][1] = new_triangles[(i + 1) % N]   # next
             self.triangles[T][2] = new_triangles[(i - 1) % N]   # previous
 
-    def get_triangilation(self):
+    def get_triangulation(self):
         return [(a - 4, b - 4, c - 4)
                 for (a, b, c) in self.triangles if a > 3 and b > 3 and c > 3]

@@ -1,18 +1,18 @@
-IS_LIQUID = True
+ALPHA1 = 10  # air heat transfer coefficient
 
-ALPHA1 = 10  # air heat transfer coefficient     @unused
-h_iz = 0.01  # height of isolation material    @unused
-K_iz = 0.0883  # isolation material coefficient of thermal conductivity  @unused
-ALPHA2 = ALPHA1 * K_iz / (K_iz + ALPHA1 * h_iz)  # isolation heat transfer coefficient   @unues
-T_ENV = 20  # environment temperature           @ unused
+h_iz = 0.01  # height of isolation material
+K_iz = 0.0883  # isolation material coefficient of thermal conductivity
+ALPHA2 = ALPHA1 * K_iz / (K_iz + ALPHA1 * h_iz)  # isolation heat transfer coefficient
+
+T_ENV = 20  # environment temperature or flow value
 T_DEF = 20  # defined border temperature
-Q_DEF = 0  # heat flow                          @unused
-Q_POINT = 5  # voltage of source points                      # 0
-Kxx = -0.46  # main coefficient of thermal conductivity      $ 1
-Kyy = -0.46  # main coefficient of thermal conductivity      $ 1
+Q_DEF = 0  # heat flow
+Q_POINT = 5  # voltage of source points
 
-min_val = 0
-max_val = 20
+Kxx = -0.46  # main coefficient of thermal conductivity
+Kyy = -0.46  # main coefficient of thermal conductivity
+
+IS_LIQUID = False
 
 if IS_LIQUID:
     ALPHA1 = None
@@ -25,3 +25,6 @@ if IS_LIQUID:
     Q_POINT = 0
     Kxx = 1
     Kyy = 1
+
+    MIN_VAL = 0
+    MAX_VAL = 20
