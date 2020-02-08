@@ -39,7 +39,6 @@ class BorderType:
     HeatFlow = 'heat_flow'
     ConvectiveHeatTransfer = 'convective_heat_transfer'
     DefinedTemperature = 'defined_temperature'
-    LinearDefinedTemperature = 'linear_defined_temperature'
     HeatIsolation = 'heat_isolation'
     NoBorder = 'no_border'
 
@@ -244,7 +243,7 @@ class Detail:
         y_down = 0
         y_up = quad_size
 
-        N = 15
+        N = 40
 
         nodes, cells, border_nodes_indexes = get_square_circled_triang(N, quad_size) if isLiquid else get_square_triang(N, quad_size)
 
@@ -283,8 +282,8 @@ class Detail:
         for i in range(len(self.borders)):
             if self.isLiquid:
                 if i in [0, 2]:
-                    type = BorderType.LinearDefinedTemperature
-                    val = None
+                    type = BorderType.HeatFlow
+                    val = 0
                 elif i in [1, 3]:
                     type = BorderType.DefinedTemperature
                     if i == 1:
@@ -314,45 +313,18 @@ class Detail:
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s1.index].t = val
                     self.nodes[elem.s2.index].t = val
-                elif type == BorderType.LinearDefinedTemperature:
-
-                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
-                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
-
-                    koef = (max_val - min_val) / (up_border - bottom_border)
-                    self.nodes[elem.s1.index].t = min_val + koef*(self.nodes[elem.s1.index].y - bottom_border)
-                    self.nodes[elem.s2.index].t = min_val + koef*(self.nodes[elem.s2.index].y - bottom_border)
-
             elif elem.s2.is_in_line(self.borders[i]) and elem.s3.is_in_line(self.borders[i]):
                 is_border = True
                 border = ElemBorderKey.second
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s2.index].t = val
                     self.nodes[elem.s3.index].t = val
-                elif type == BorderType.LinearDefinedTemperature:
-
-                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
-                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
-
-                    koef = (max_val - min_val) / (up_border - bottom_border)
-                    self.nodes[elem.s3.index].t = min_val + koef * (self.nodes[elem.s3.index].y - bottom_border)
-                    self.nodes[elem.s2.index].t = min_val + koef * (self.nodes[elem.s2.index].y - bottom_border)
-
             elif elem.s3.is_in_line(self.borders[i]) and elem.s1.is_in_line(self.borders[i]):
                 is_border = True
                 border = ElemBorderKey.third
                 if type == BorderType.DefinedTemperature:
                     self.nodes[elem.s3.index].t = val
                     self.nodes[elem.s1.index].t = val
-                elif type == BorderType.LinearDefinedTemperature:
-
-                    bottom_border = self.borders[i][0].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][1].y
-                    up_border = self.borders[i][1].y if self.borders[i][1].y > self.borders[i][0].y else self.borders[i][0].y
-
-                    koef = (max_val - min_val) / (up_border - bottom_border)
-                    self.nodes[elem.s1.index].t = min_val + koef * (self.nodes[elem.s1.index].y - bottom_border)
-                    self.nodes[elem.s3.index].t = min_val + koef * (self.nodes[elem.s3.index].y - bottom_border)
-
             if is_border:
                 elem.borders[border].type = type
                 elem.borders[border].val = val
