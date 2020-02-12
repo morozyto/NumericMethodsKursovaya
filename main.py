@@ -1,5 +1,4 @@
 from conjugate_gradient_method import solve
-from sparse_matrix import SparseMatrix
 import matplotlib.pyplot as plt
 import time
 
@@ -112,6 +111,8 @@ if __name__ == '__main__':
     start = time.time()
 
     fem = FEM(Detail(isLiquid=CONSTANTS.IS_LIQUID))
+    print('count_points in {} seconds'.format(time.time() - start))
+    start = time.time()
 
     fem.build_system()
     print('building system in {} seconds'.format(time.time() - start))
