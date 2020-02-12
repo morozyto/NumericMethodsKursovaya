@@ -72,53 +72,6 @@ class FEM:
         plt.gca().set_aspect('equal', adjustable='box')
         plt.show()
 
-    def create_vtu_vector(self, file):
-
-        dt = triangulation.Delaunay((50, 50), 1000)
-
-        seeds = zip(self.grad_X, self.grad_Y)
-
-        for s in seeds:
-            dt.add(s)
-
-        res = dt.get_triangulation()
-
-        output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
-        output += '\n\t\t<Piece NumberOfPoints="{}" NumberOfCells="{}">'.format(len(self.detail.elements, len(res)))
-
-
-        components = ''
-        for node in seeds:
-            components += '{} {} 0 '.format(node[0], node[1])
-        output += '\n\t\t<Points>\n\t\t\t<DataArray type="Float64" ' \
-                  'NumberOfComponents="3" format="ascii">{}</DataArray>\n\t\t</Points>'.format(components)
-        output += '\n\t\t<Cells>'
-        connectivity = ''
-        offsets = ''
-        types = ''
-        values = ''
-
-        for cell in res:
-            connectivity += '{} {} {} '.format(cell[0], cell[1], cell[2])
-
-        for i in range(len(res)):
-            offsets += '{} '.format((i + 1) * 3)
-            types += '{} '.format(5)
-        for u, v in zip(self.grad_U, self.grad_V):
-            values += '{} '.format(math.sqrt(u * u + v * v))
-
-        output += '\n\t\t\t<DataArray type="UInt32" Name="connectivity" format="ascii">{}</DataArray>'.format(
-            connectivity)
-        output += '\n\t\t\t<DataArray type="UInt32" Name="offsets" format="ascii">{}</DataArray>'.format(offsets)
-        output += '\n\t\t\t<DataArray type="UInt8" Name="types" format="ascii">{}</DataArray>'.format(types)
-        output += '\n\t\t</Cells>'
-        output += '\n\t\t<PointData Scalars="T">\n\t\t\t<DataArray type="Float64" Name="T"' \
-                  ' format="ascii">{}</DataArray>\n\t\t</PointData>'.format(values)
-        output += '\n\t\t</Piece>\n\t</UnstructuredGrid>\n</VTKFile>'
-
-        f = open(file, "w+")
-        f.write(output)
-        f.close()
 
     def create_vtu(self, file):
         output = '<?xml version="1.0"?>\n<VTKFile type="UnstructuredGrid" version="0.1" >\n\t<UnstructuredGrid>'
@@ -169,5 +122,4 @@ if __name__ == '__main__':
     fem.get_info()
     fem.build_gradients()
     fem.create_vtu('data.vtu')
-    fem.create_vtu_vector('gradient_data.vtu')
 
